@@ -1,39 +1,19 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-/**
- * Tenta capturar as variáveis de ambiente de forma segura no navegador.
- */
-const getEnvVar = (baseName: string): string => {
-  const variations = [
-    baseName,
-    `VITE_${baseName}`,
-    `NEXT_PUBLIC_${baseName}`,
-    `REACT_APP_${baseName}`
-  ];
-
-  try {
-    // Verifica se 'process' e 'process.env' existem para evitar crash fatal
-    const env = (typeof process !== 'undefined' && process.env) 
-      ? process.env 
-      : (window as any).process?.env;
-
-    if (!env) return '';
-
-    for (const v of variations) {
-      const value = (env as any)[v];
-      if (value && typeof value === 'string' && value.trim().length > 0) {
-        return value.trim();
-      }
-    }
-  } catch (e) {
-    // Silencia erros de acesso a variáveis de ambiente
-  }
-  return '';
+// Função ultra-segura para capturar variáveis de ambiente sem quebrar o browser
+const getEnv = (key: string): string => {
+  const g = globalThis as any;
+  const env = g.process?.env || g.import?.meta?.env || {};
+  
+  return env[key] || 
+         env[`VITE_${key}`] || 
+         env[`NEXT_PUBLIC_${key}`] || 
+         '';
 };
 
-const supabaseUrl = getEnvVar('SUPABASE_URL');
-const supabaseAnonKey = getEnvVar('SUPABASE_KEY') || getEnvVar('SUPABASE_ANON_KEY');
+const supabaseUrl = getEnv('SUPABASE_URL');
+const supabaseAnonKey = getEnv('SUPABASE_KEY') || getEnv('SUPABASE_ANON_KEY');
 
 export const isSupabaseConfigured = !!(
   supabaseUrl && 
@@ -41,19 +21,14 @@ export const isSupabaseConfigured = !!(
   supabaseUrl.startsWith('https://')
 );
 
-// Inicializa o cliente apenas se configurado e se as chaves forem válidas
+// Inicializa o cliente apenas se tivermos os dados necessários
 export const supabase = isSupabaseConfigured
   ? createClient(supabaseUrl, supabaseAnonKey)
   : null;
 
-// Diagnóstico seguro no console
-if (typeof window !== 'undefined') {
-  console.group("🛠️ Status da Conexão Cloud");
-  if (isSupabaseConfigured) {
-    console.log("✅ Supabase: Configurado");
-  } else {
-    console.warn("⚠️ Supabase: Não configurado. Usando MODO LOCAL.");
-    console.info("Dica: Adicione VITE_SUPABASE_URL e VITE_SUPABASE_KEY na Vercel e faça Redeploy.");
-  }
-  console.groupEnd();
+// Log de diagnóstico silencioso
+if (isSupabaseConfigured) {
+  console.log("☁️ Supabase Cloud: Ativo");
+} else {
+  console.log("🏠 Modo Local: Ativo (LocalStorage)");
 }
