@@ -1,14 +1,14 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-/**
- * IMPORTANTE: Use sempre a ANON/PUBLISHABLE KEY aqui.
- * Nomes comuns: SUPABASE_KEY, SUPABASE_ANON_KEY, NEXT_PUBLIC_SUPABASE_ANON_KEY
- */
-const supabaseUrl = process.env.SUPABASE_URL || '';
-const supabaseAnonKey = process.env.SUPABASE_KEY || process.env.SUPABASE_ANON_KEY || '';
+// No Vercel/Vite, as variáveis podem vir com ou sem prefixo dependendo da configuração do projeto
+const rawUrl = process.env.SUPABASE_URL || (process.env as any).NEXT_PUBLIC_SUPABASE_URL || (process.env as any).VITE_SUPABASE_URL;
+const rawKey = process.env.SUPABASE_KEY || process.env.SUPABASE_ANON_KEY || (process.env as any).NEXT_PUBLIC_SUPABASE_ANON_KEY || (process.env as any).VITE_SUPABASE_ANON_KEY;
 
-// Verifica se a URL é válida e se a chave existe
+// Limpeza de espaços em branco que podem vir de copy-paste
+const supabaseUrl = rawUrl?.trim() || '';
+const supabaseAnonKey = rawKey?.trim() || '';
+
 export const isSupabaseConfigured = !!(
   supabaseUrl && 
   supabaseAnonKey && 
@@ -21,8 +21,10 @@ export const supabase = isSupabaseConfigured
   ? createClient(supabaseUrl, supabaseAnonKey)
   : null;
 
-if (!isSupabaseConfigured) {
-  console.warn("Supabase: Chaves não detectadas ou inválidas. Usando modo de persistência local.");
+// Log de depuração (Visível apenas no F12 do navegador)
+if (isSupabaseConfigured) {
+  console.log("🚀 Supabase: Conectado com sucesso.");
 } else {
-  console.log("Supabase: Conexão configurada com sucesso.");
+  console.warn("⚠️ Supabase: Chaves não encontradas ou inválidas. O app funcionará em MODO LOCAL (apenas neste navegador).");
+  console.debug("Config detectada:", { url: !!supabaseUrl, key: !!supabaseAnonKey });
 }
