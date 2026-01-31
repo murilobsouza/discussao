@@ -1,15 +1,12 @@
-
 import { createClient } from '@supabase/supabase-js';
 
-// Função ultra-segura para capturar variáveis de ambiente sem quebrar o browser
 const getEnv = (key: string): string => {
-  const g = globalThis as any;
-  const env = g.process?.env || g.import?.meta?.env || {};
-  
-  return env[key] || 
-         env[`VITE_${key}`] || 
-         env[`NEXT_PUBLIC_${key}`] || 
-         '';
+  try {
+    const env = (window as any).process?.env || {};
+    return env[key] || "";
+  } catch {
+    return "";
+  }
 };
 
 const supabaseUrl = getEnv('SUPABASE_URL');
@@ -21,14 +18,7 @@ export const isSupabaseConfigured = !!(
   supabaseUrl.startsWith('https://')
 );
 
-// Inicializa o cliente apenas se tivermos os dados necessários
-export const supabase = isSupabaseConfigured
-  ? createClient(supabaseUrl, supabaseAnonKey)
+// Cria o cliente apenas se configurado, caso contrário exporta null com segurança
+export const supabase = isSupabaseConfigured 
+  ? createClient(supabaseUrl, supabaseAnonKey) 
   : null;
-
-// Log de diagnóstico silencioso
-if (isSupabaseConfigured) {
-  console.log("☁️ Supabase Cloud: Ativo");
-} else {
-  console.log("🏠 Modo Local: Ativo (LocalStorage)");
-}

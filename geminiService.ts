@@ -8,33 +8,30 @@ export async function getAIFeedback(
   stepIndex: number,
   studentResponse: string
 ): Promise<AIResponse> {
-  // Acesso seguro à API_KEY conforme diretrizes
-  const g = globalThis as any;
-  const apiKey = g.process?.env?.API_KEY || '';
-  
-  if (!apiKey) {
-    return {
-      feedback: "Erro: API Key não configurada. O Tutor não pode responder.",
-      score: 0,
-      justification: "Configuração de ambiente ausente."
-    };
-  }
-
-  const ai = new GoogleGenAI({ apiKey });
-  const model = 'gemini-3-flash-preview';
-  
-  const caseContext = `
-    Caso: ${currentCase.title}
-    Tema: ${currentCase.theme}
-    Etapa Atual: ${stepIndex + 1} de ${currentCase.steps.length}
-    Informação da Etapa: ${currentCase.steps[stepIndex].content}
-    Pergunta feita: ${currentCase.steps[stepIndex].question}
-    Resposta do Aluno: ${studentResponse}
-  `;
-
   try {
+    // Acesso obrigatório via process.env.API_KEY
+    const apiKey = process.env.API_KEY;
+    
+    if (!apiKey) {
+      return {
+        feedback: "Atenção: A API_KEY do Gemini não foi configurada. O feedback da IA está desativado.",
+        score: 0,
+        justification: "Configuração ausente."
+      };
+    }
+
+    const ai = new GoogleGenAI({ apiKey });
+    const model = 'gemini-3-flash-preview';
+    
+    const caseContext = `
+      Caso: ${currentCase.title}
+      Etapa: ${currentCase.steps[stepIndex].title}
+      Pergunta: ${currentCase.steps[stepIndex].question}
+      Resposta do Aluno: ${studentResponse}
+    `;
+
     const response = await ai.models.generateContent({
-      model: model,
+      model,
       contents: caseContext,
       config: {
         systemInstruction: SYSTEM_PROMPT,
@@ -51,20 +48,13 @@ export async function getAIFeedback(
       }
     });
 
-    const text = response.text || '{}';
-    const result = JSON.parse(text);
-    
-    return {
-      feedback: result.feedback || "Feedback não gerado.",
-      score: result.score ?? 0,
-      justification: result.justification || ""
-    };
+    return JSON.parse(response.text || '{}') as AIResponse;
   } catch (error) {
     console.error("Erro Gemini:", error);
     return {
-      feedback: "Erro de conexão com a inteligência artificial.",
+      feedback: "Erro técnico ao processar resposta.",
       score: 0,
-      justification: "Falha na chamada da API."
+      justification: "Falha na API."
     };
   }
 }
