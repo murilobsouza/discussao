@@ -3,14 +3,34 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { SYSTEM_PROMPT } from "./constants";
 import { AIResponse, ClinicalCase } from "./types";
 
-// Always use strictly const ai = new GoogleGenAI({apiKey: process.env.API_KEY});
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Função auxiliar para obter a API KEY de forma segura
+const getApiKey = () => {
+  try {
+    return (typeof process !== 'undefined' && process.env?.API_KEY) 
+      ? process.env.API_KEY 
+      : (window as any).process?.env?.API_KEY || '';
+  } catch {
+    return '';
+  }
+};
 
 export async function getAIFeedback(
   currentCase: ClinicalCase,
   stepIndex: number,
   studentResponse: string
 ): Promise<AIResponse> {
+  const apiKey = getApiKey();
+  
+  if (!apiKey) {
+    return {
+      feedback: "Erro: API Key da Gemini não configurada no ambiente.",
+      score: 0,
+      justification: "Configuração ausente."
+    };
+  }
+
+  // Inicializa o cliente dentro da chamada para garantir que use a chave atualizada
+  const ai = new GoogleGenAI({ apiKey });
   const model = 'gemini-3-flash-preview';
   
   const caseContext = `
@@ -41,7 +61,6 @@ export async function getAIFeedback(
       }
     });
 
-    // Directly access text property from response object
     const result = JSON.parse(response.text || '{}');
     return {
       feedback: result.feedback || "Não foi possível gerar feedback.",
@@ -51,9 +70,9 @@ export async function getAIFeedback(
   } catch (error) {
     console.error("Erro na API da IA:", error);
     return {
-      feedback: "Houve um erro técnico ao processar sua resposta. Tente novamente.",
+      feedback: "Houve um erro técnico ao processar sua resposta. Verifique a cota da API ou tente novamente.",
       score: 0,
-      justification: "Erro de conexão com o servidor de IA."
+      justification: "Erro de comunicação com Gemini."
     };
   }
 }
