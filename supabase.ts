@@ -1,13 +1,22 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-// No Vercel/Vite, as variáveis podem vir com ou sem prefixo dependendo da configuração do projeto
-const rawUrl = process.env.SUPABASE_URL || (process.env as any).NEXT_PUBLIC_SUPABASE_URL || (process.env as any).VITE_SUPABASE_URL;
-const rawKey = process.env.SUPABASE_KEY || process.env.SUPABASE_ANON_KEY || (process.env as any).NEXT_PUBLIC_SUPABASE_ANON_KEY || (process.env as any).VITE_SUPABASE_ANON_KEY;
+/**
+ * Procura as chaves em todas as variações possíveis de prefixos.
+ * Vercel/Vite/React costumam exigir prefixos diferentes.
+ */
+const getEnv = (name: string) => {
+  return (
+    (process.env as any)[name] ||
+    (process.env as any)[`VITE_${name}`] ||
+    (process.env as any)[`NEXT_PUBLIC_${name}`] ||
+    (process.env as any)[`REACT_APP_${name}`] ||
+    ''
+  ).trim();
+};
 
-// Limpeza de espaços em branco que podem vir de copy-paste
-const supabaseUrl = rawUrl?.trim() || '';
-const supabaseAnonKey = rawKey?.trim() || '';
+const supabaseUrl = getEnv('SUPABASE_URL');
+const supabaseAnonKey = getEnv('SUPABASE_KEY') || getEnv('SUPABASE_ANON_KEY');
 
 export const isSupabaseConfigured = !!(
   supabaseUrl && 
@@ -21,10 +30,14 @@ export const supabase = isSupabaseConfigured
   ? createClient(supabaseUrl, supabaseAnonKey)
   : null;
 
-// Log de depuração (Visível apenas no F12 do navegador)
-if (isSupabaseConfigured) {
-  console.log("🚀 Supabase: Conectado com sucesso.");
+// Diagnóstico para o desenvolvedor no navegador (F12)
+if (!isSupabaseConfigured) {
+  console.group("🛠️ Diagnóstico de Conexão Supabase");
+  console.warn("Status: MODO LOCAL ATIVO");
+  console.info("Para ativar a nuvem, configure na Vercel:");
+  console.log("- SUPABASE_URL:", supabaseUrl ? "✅ Detectada" : "❌ Ausente");
+  console.log("- SUPABASE_KEY:", supabaseAnonKey ? "✅ Detectada" : "❌ Ausente");
+  console.groupEnd();
 } else {
-  console.warn("⚠️ Supabase: Chaves não encontradas ou inválidas. O app funcionará em MODO LOCAL (apenas neste navegador).");
-  console.debug("Config detectada:", { url: !!supabaseUrl, key: !!supabaseAnonKey });
+  console.log("🚀 Supabase: Conexão configurada e ativa.");
 }
