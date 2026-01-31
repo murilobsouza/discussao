@@ -15,11 +15,17 @@ const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const savedUser = localStorage.getItem('oftalmo_current_user');
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
+    try {
+      const savedUser = localStorage.getItem('oftalmo_current_user');
+      if (savedUser) {
+        setUser(JSON.parse(savedUser));
+      }
+    } catch (e) {
+      console.error("Erro ao carregar usuário salvo:", e);
+      localStorage.removeItem('oftalmo_current_user');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
   const handleLogin = (user: UserProfile) => {
@@ -41,12 +47,10 @@ const App: React.FC = () => {
     );
   }
 
-  // Se não há usuário logado, mostra Auth (que agora permite criar conta local ou cloud)
   if (!user) {
     return <Auth onLogin={handleLogin} />;
   }
 
-  // Se houver uma sessão de caso ativa, mostra a sessão
   if (activeSessionId) {
     return (
       <CaseSession 
