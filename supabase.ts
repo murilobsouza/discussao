@@ -2,8 +2,7 @@
 import { createClient } from '@supabase/supabase-js';
 
 /**
- * Tenta capturar as variáveis de todas as formas possíveis que 
- * diferentes servidores de deploy (Vercel, Netlify, Cloudflare) utilizam.
+ * Tenta capturar as variáveis de ambiente de forma segura no navegador.
  */
 const getEnvVar = (baseName: string): string => {
   const variations = [
@@ -13,11 +12,22 @@ const getEnvVar = (baseName: string): string => {
     `REACT_APP_${baseName}`
   ];
 
-  for (const v of variations) {
-    const value = (process.env as any)[v];
-    if (value && typeof value === 'string' && value.trim().length > 0) {
-      return value.trim();
+  try {
+    // Verifica se 'process' e 'process.env' existem para evitar crash fatal
+    const env = (typeof process !== 'undefined' && process.env) 
+      ? process.env 
+      : (window as any).process?.env;
+
+    if (!env) return '';
+
+    for (const v of variations) {
+      const value = (env as any)[v];
+      if (value && typeof value === 'string' && value.trim().length > 0) {
+        return value.trim();
+      }
     }
+  } catch (e) {
+    // Silencia erros de acesso a variáveis de ambiente
   }
   return '';
 };
@@ -31,19 +41,19 @@ export const isSupabaseConfigured = !!(
   supabaseUrl.startsWith('https://')
 );
 
-// Inicializa o cliente apenas se configurado
+// Inicializa o cliente apenas se configurado e se as chaves forem válidas
 export const supabase = isSupabaseConfigured
   ? createClient(supabaseUrl, supabaseAnonKey)
   : null;
 
-// Diagnóstico avançado para o console do navegador
-console.group("🛠️ Status da Conexão Cloud");
-if (isSupabaseConfigured) {
-  console.log("✅ Supabase: Configurado");
-  console.log(`📍 URL: ${supabaseUrl.substring(0, 15)}...`);
-  console.log(`🔑 Key: ${supabaseAnonKey.substring(0, 6)}...`);
-} else {
-  console.warn("⚠️ Supabase: Não configurado. Usando MODO LOCAL (LocalStorage).");
-  console.info("Dica: No Vercel, use o prefixo VITE_ nas variáveis (ex: VITE_SUPABASE_URL)");
+// Diagnóstico seguro no console
+if (typeof window !== 'undefined') {
+  console.group("🛠️ Status da Conexão Cloud");
+  if (isSupabaseConfigured) {
+    console.log("✅ Supabase: Configurado");
+  } else {
+    console.warn("⚠️ Supabase: Não configurado. Usando MODO LOCAL.");
+    console.info("Dica: Adicione VITE_SUPABASE_URL e VITE_SUPABASE_KEY na Vercel e faça Redeploy.");
+  }
+  console.groupEnd();
 }
-console.groupEnd();
