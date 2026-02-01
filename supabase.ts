@@ -1,24 +1,12 @@
+
 import { createClient } from '@supabase/supabase-js';
 
-const getEnv = (key: string): string => {
-  try {
-    const env = (window as any).process?.env || {};
-    return env[key] || "";
-  } catch {
-    return "";
-  }
-};
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseAnonKey = process.env.SUPABASE_KEY;
 
-const supabaseUrl = getEnv('SUPABASE_URL');
-const supabaseAnonKey = getEnv('SUPABASE_KEY') || getEnv('SUPABASE_ANON_KEY');
+// Verifica se as configurações básicas existem para evitar erro de execução fatal
+export const isSupabaseConfigured = !!(supabaseUrl && supabaseAnonKey && supabaseUrl !== '');
 
-export const isSupabaseConfigured = !!(
-  supabaseUrl && 
-  supabaseAnonKey && 
-  supabaseUrl.startsWith('https://')
-);
-
-// Cria o cliente apenas se configurado, caso contrário exporta null com segurança
-export const supabase = isSupabaseConfigured 
-  ? createClient(supabaseUrl, supabaseAnonKey) 
-  : null;
+export const supabase = isSupabaseConfigured
+  ? createClient(supabaseUrl as string, supabaseAnonKey as string)
+  : (null as any);

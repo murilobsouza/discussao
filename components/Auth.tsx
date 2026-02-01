@@ -3,8 +3,7 @@ import React, { useState } from 'react';
 import { UserProfile, UserRole } from '../types';
 import { storage } from '../storage';
 import { AUTH_CODES } from '../constants';
-import { isSupabaseConfigured } from '../supabase';
-import { Eye, EyeOff, Stethoscope, Loader2, Database, ShieldAlert } from 'lucide-react';
+import { Eye, EyeOff, Stethoscope, Loader2 } from 'lucide-react';
 
 interface AuthProps {
   onLogin: (user: UserProfile) => void;
@@ -28,15 +27,13 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
 
     try {
       if (isLogin) {
+        // No Supabase real, usaríamos supabase.auth.signIn
+        // Para este MVP com tabela 'profiles':
         const profile = await storage.getProfile(email);
         if (profile) {
           onLogin(profile);
         } else {
-          setError(
-            !isSupabaseConfigured 
-            ? 'Usuário não encontrado localmente. Tente criar uma conta.' 
-            : 'Usuário não encontrado no banco de dados. Verifique o e-mail ou crie uma conta.'
-          );
+          setError('Usuário não encontrado ou credenciais inválidas.');
         }
       } else {
         const expectedCode = role === 'student' ? AUTH_CODES.STUDENT : AUTH_CODES.PROFESSOR;
@@ -58,8 +55,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
         onLogin(newUser);
       }
     } catch (err) {
-      console.error(err);
-      setError('Erro crítico ao acessar o banco de dados. Verifique sua conexão.');
+      setError('Erro de conexão com o banco de dados.');
     } finally {
       setLoading(false);
     }
@@ -68,32 +64,18 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
   return (
     <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
       <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden border border-slate-200">
-        <div className="bg-blue-600 p-10 text-white text-center relative">
+        <div className="bg-blue-600 p-10 text-white text-center">
           <div className="flex justify-center mb-4">
             <Stethoscope size={56} className="text-blue-100" />
           </div>
           <h1 className="text-2xl font-bold tracking-tight">Tutor Oftalmologia</h1>
           <p className="text-blue-100 mt-1 text-sm font-medium">Plataforma de Casos Clínicos</p>
-          
-          {/* Indicador visual de modo de conexão */}
-          <div className="absolute top-4 right-4">
-            {isSupabaseConfigured ? (
-              <div className="bg-emerald-500/20 text-emerald-100 p-1.5 rounded-full" title="Conectado ao Cloud">
-                <Database size={14} />
-              </div>
-            ) : (
-              <div className="bg-amber-500/20 text-amber-100 p-1.5 rounded-full" title="Modo Local Offline">
-                <ShieldAlert size={14} />
-              </div>
-            )}
-          </div>
         </div>
 
         <form onSubmit={handleSubmit} className="p-8 space-y-4">
           {error && (
-            <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm font-bold border border-red-100 animate-fade-in flex gap-2 items-start">
-              <ShieldAlert size={18} className="shrink-0 mt-0.5" />
-              <span>{error}</span>
+            <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm font-bold border border-red-100 animate-fade-in">
+              {error}
             </div>
           )}
 
